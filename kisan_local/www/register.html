@@ -1,0 +1,114 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+
+<script>
+const REDIRECT_URL = "/dashboard/book-tickets/kisan-swaraj-sammelan-2026-western-norther-region";
+
+function create_user_with_email() {
+    let email = document.getElementById("email").value.trim();
+    
+    if (!email) {
+        frappe.msgprint({
+            title: 'Email Required',
+            message: 'Please enter your email address',
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        frappe.msgprint({
+            title: 'Invalid Email',
+            message: 'Please enter a valid email address',
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    create_user(email);
+}
+
+function create_user_without_email() {
+    create_user(null);
+}
+
+function create_user(email) {
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add("disabled");
+    });
+    
+    frappe.call({
+        method: "kisan_local.api.create_user",
+        args: { email },
+        error: function(r) {
+            console.error("User creation error:", r);
+            reset_buttons();
+            frappe.msgprint({
+                title: 'Error',
+                message: 'An error occurred while creating user. Please try again.',
+                indicator: 'red'
+            });
+        }
+    }).then(() => {
+        window.location.href = REDIRECT_URL;
+    });
+}
+
+function reset_buttons() {
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove("disabled");
+    });
+}
+</script>
+
+<div class="container my-5 px-3" style="max-width: 540px;">
+    <div class="card shadow-sm">
+        <div class="card-body p-4 p-md-5">
+
+            <h3 class="text-center pb-2 mb-4">
+                {{ _("Login to Kisan Swaraj Sammelan Platform") }}
+            </h3>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    {{ _("Email") }} <span class="text-danger">*</span>
+                </label>
+                <input 
+                    id="email"
+                    type="email"
+                    class="form-control form-control-lg"
+                    placeholder="{{ _('Enter your email') }}"
+                    onkeypress="if(event.key === 'Enter') create_user_with_email()"
+                />
+            </div>
+
+                    <div class="text-center">
+            <button 
+                onclick="create_user_with_email()"
+                class="btn btn-primary btn-sm w-50 mx-auto my-2 d-block mb-4"
+            >
+                {{ _("Continue") }}
+            </button>
+        </div>
+
+        <div class="text-center text-muted mb-4">{{ _("or") }}</div>
+
+        <div class="text-center">
+            <button 
+                class="btn btn-outline-secondary btn-sm w-50 mx-auto d-block"
+                onclick="create_user_without_email()"
+            >
+                {{ _("I don't have an Email ID") }}
+            </button>
+        </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}
