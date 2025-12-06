@@ -29,7 +29,7 @@ def create_user(email=None):
 		else:
 			user = frappe.get_cached_doc("User", user_exists)
 
-		frappe.set_user(user.name)
+		frappe.local.login_manager.login_as(user.name)
 
 		return {
 			"status": "success",
