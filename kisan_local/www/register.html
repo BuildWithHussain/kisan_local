@@ -4,6 +4,20 @@
 <script>
 const REDIRECT_URL = "/dashboard/book-tickets/kisan-swaraj-sammelan-2026-western-norther-region";
 
+document.addEventListener('DOMContentLoaded', function() {
+    if (frappe.session.user && frappe.session.user !== 'Guest') {
+        window.location.href = REDIRECT_URL;
+    }
+});
+
+window.addEventListener('pageshow', function(event) {
+    reset_buttons();
+    if (document.getElementById('mobile-section').style.display !== 'none') {
+        document.getElementById('mobile-section').style.display = 'none';
+        document.getElementById('email-section').style.display = 'block';
+    }
+});
+
 function create_user_with_email() {
     let email = document.getElementById("email").value.trim();
     
@@ -26,14 +40,46 @@ function create_user_with_email() {
         return;
     }
     
-    create_user(email);
+    create_user(email, null);
 }
 
 function create_user_without_email() {
-    create_user(null);
+    // Show mobile number input section
+    document.getElementById('email-section').style.display = 'none';
+    document.getElementById('mobile-section').style.display = 'block';
 }
 
-function create_user(email) {
+function create_user_with_mobile() {
+    let mobile = document.getElementById("mobile").value.trim();
+    
+    if (!mobile) {
+        frappe.msgprint({
+            title: 'Mobile Number Required',
+            message: 'Please enter your mobile number',
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobile)) {
+        frappe.msgprint({
+            title: 'Invalid Mobile Number',
+            message: 'Please enter a valid 10-digit Indian mobile number',
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    create_user(null, mobile);
+}
+
+function go_back_to_email() {
+    document.getElementById('mobile-section').style.display = 'none';
+    document.getElementById('email-section').style.display = 'block';
+}
+
+function create_user(email, mobile) {
     const buttons = document.querySelectorAll('button');
     buttons.forEach(btn => {
         btn.disabled = true;
@@ -42,7 +88,7 @@ function create_user(email) {
     
     frappe.call({
         method: "kisan_local.api.create_user",
-        args: { email },
+        args: { email, mobile },
         error: function(r) {
             console.error("User creation error:", r);
             reset_buttons();
@@ -70,42 +116,74 @@ function reset_buttons() {
     <div class="card shadow-sm">
         <div class="card-body p-4 p-md-5">
 
-            <h3 class="text-center pb-2 mb-4">
+            <h3 class="text-center pb-2 mb-5" style="font-weight: 600; font-size: 1.3rem;">
                 {{ _("Register to Kisan Swaraj Sammelan Platform") }}
             </h3>
 
-            <div class="mb-4">
-                <label class="form-label">
-                    {{ _("Email") }} <span class="text-danger">*</span>
-                </label>
-                <input 
-                    id="email"
-                    type="email"
-                    class="form-control form-control-lg"
-                    placeholder="{{ _('Enter your email') }}"
-                    onkeypress="if(event.key === 'Enter') create_user_with_email()"
-                />
+            <div id="email-section">
+                <div class="mb-4 d-flex justify-content-center">
+                    <div style="width: 300px;">
+                        <label class="form-label" style="font-weight: 500; margin-bottom: 8px; font-size: 0.9rem;">{{ _("Email") }}</label>
+                        <input 
+                            id="email"
+                            type="email"
+                            class="form-control"
+                            placeholder="{{ _('jane@example.com') }}"
+                            onkeypress="if(event.key === 'Enter') create_user_with_email()"
+                            style="background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 14px; font-size: 0.9rem;"
+                        />
+                    </div>
+                </div>
+
+                <div class="mb-4 text-center">
+                    <button 
+                        onclick="create_user_with_email()"
+                        class="btn btn-primary btn-sm"
+                        style="width: 300px;"
+                    >
+                        {{ _("Continue") }}
+                    </button>
+                </div>
+
+                <div class="text-center text-muted mb-4" style="font-size: 0.85rem;">{{ _("or") }}</div>
+
+                <div class="mb-3 text-center">
+                    <button 
+                        class="btn btn-primary btn-sm"
+                        onclick="create_user_without_email()"
+                        style="width: 300px;"
+                    >
+                        {{ _("I don't have an Email ID") }}
+                    </button>
+                </div>
             </div>
 
-                    <div class="text-center">
-            <button 
-                onclick="create_user_with_email()"
-                class="btn btn-primary btn-sm w-50 mx-auto my-2 d-block mb-4"
-            >
-                {{ _("Continue") }}
-            </button>
-        </div>
+            <div id="mobile-section" style="display: none;">
+                <div class="mb-5 d-flex justify-content-center" style="margin-bottom: 2rem !important;">
+                    <div style="width: 300px;">
+                        <label class="form-label" style="font-weight: 500; margin-bottom: 8px; font-size: 0.9rem;">{{ _("Mobile Number") }}</label>
+                        <input 
+                            id="mobile"
+                            type="tel"
+                            class="form-control"
+                            placeholder="{{ _('Enter your 10-digit mobile number') }}"
+                            maxlength="10"
+                            onkeypress="if(event.key === 'Enter') create_user_with_mobile()"
+                            style="background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 14px; font-size: 0.9rem;"
+                        />
+                    </div>
+                </div>
 
-        <div class="text-center text-muted mb-4">{{ _("or") }}</div>
-
-        <div class="text-center">
-            <button 
-                class="btn btn-outline-secondary btn-sm w-50 mx-auto d-block"
-                onclick="create_user_without_email()"
-            >
-                {{ _("I don't have an Email ID") }}
-            </button>
-        </div>
+                <div class="mb-3 text-center">
+                    <button 
+                        onclick="create_user_with_mobile()"
+                        class="btn btn-primary btn-sm"
+                        style="width: 300px;"
+                    >
+                        {{ _("Continue") }}
+                    </button>
+                </div>
+            </div>
 
         </div>
     </div>
