@@ -40,11 +40,12 @@ def create_user(email=None, mobile=None):
 		else:
 			user = frappe.get_cached_doc("User", email)
 
+		# Properly login the user and update session
 		frappe.local.login_manager.login_as(user.name)
+		
+		# Update session user
+		frappe.session.user = user.name
 		frappe.db.commit()
-
-		frappe.local.cookie_manager.set_cookie("user_id", user.name)
-		frappe.local.cookie_manager.set_cookie("sid", frappe.session.sid)
 
 		return {
 			"status": "success",
