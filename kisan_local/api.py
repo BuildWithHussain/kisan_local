@@ -11,13 +11,12 @@ def create_user(email=None, mobile=None, language=None):
 
         if mobile:
             email = f"user_{mobile}@noemail.com"
-            first_name = f"Mobile-{mobile}"
         elif not email:
             random_hash = frappe.generate_hash(length=12)
             email = f"user_{random_hash}@noemail.com"
-            first_name = f"Guest-{random_hash}"
-        else:
-            first_name = email.split("@")[0]
+
+        first_name = ""
+
 
         user_exists = frappe.db.exists("User", email)
 
