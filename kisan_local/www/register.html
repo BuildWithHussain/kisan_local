@@ -1,192 +1,188 @@
 {% extends "templates/web.html" %}
 {% block page_content %}
 
+<style>
+.register-container {
+    max-width: 540px;
+    margin-top: 48px;
+}
+
+.register-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.page-lang {
+    position: absolute;
+    top: 16px;
+    right: -140px; 
+    z-index: 20;
+}
+
+.form-narrow {
+    width: 300px;
+    max-width: 100%;
+}
+
+.center-narrow {
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .page-lang {
+        position: static;
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+    }
+    .form-narrow {
+        width: 100%;
+    }
+}
+
+.language-dropdown {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.language-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: none;
+    min-width: 200px;
+}
+
+.language-menu.active { display: block; }
+.language-option { padding: 12px 16px; cursor: pointer; }
+.language-option:hover { background: #f5f5f5; }
+.language-option.selected { background: #e8f4fd; color: #2490ef; }
+</style>
+
 <script>
 const REDIRECT_URL = "/dashboard/book-tickets/KSS-2026-South-India";
+const LANGUAGES = {
+    'en': { native: 'English' },
+    'kn': { native: 'ಕನ್ನಡ' },
+    'ta': { native: 'தமிழ்' },
+    'te': { native: 'తెలుగు' },
+    'ml': { native: 'മലയാളം' }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     if (frappe.session.user && frappe.session.user !== 'Guest') {
         window.location.href = REDIRECT_URL;
     }
+    initLanguageSelector();
 });
 
-window.addEventListener('pageshow', function(event) {
-    reset_buttons();
-    if (document.getElementById('mobile-section').style.display !== 'none') {
-        document.getElementById('mobile-section').style.display = 'none';
-        document.getElementById('email-section').style.display = 'block';
-    }
-});
+function initLanguageSelector() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentLang = urlParams.get('lang') || 'en';
+    document.getElementById('selected-lang').innerText = LANGUAGES[currentLang].native;
 
-function create_user_with_email() {
-    let email = document.getElementById("email").value.trim();
-    
-    if (!email) {
-        frappe.msgprint({
-            title: 'Email Required',
-            message: 'Please enter your email address',
-            indicator: 'red'
-        });
-        return;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        frappe.msgprint({
-            title: 'Invalid Email',
-            message: 'Please enter a valid email address',
-            indicator: 'red'
-        });
-        return;
-    }
-    
-    create_user(email, null);
-}
+    document.getElementById('lang-dropdown').onclick = e => {
+        e.stopPropagation();
+        document.getElementById('lang-menu').classList.toggle('active');
+    };
 
-function create_user_without_email() {
-    // Show mobile number input section
-    document.getElementById('email-section').style.display = 'none';
-    document.getElementById('mobile-section').style.display = 'block';
-}
-
-function create_user_with_mobile() {
-    let mobile = document.getElementById("mobile").value.trim();
-    
-    if (!mobile) {
-        frappe.msgprint({
-            title: 'Mobile Number Required',
-            message: 'Please enter your mobile number',
-            indicator: 'red'
-        });
-        return;
-    }
-    
-    const mobileRegex = /^[6-9]\d{9}$/;
-    if (!mobileRegex.test(mobile)) {
-        frappe.msgprint({
-            title: 'Invalid Mobile Number',
-            message: 'Please enter a valid 10-digit Indian mobile number',
-            indicator: 'red'
-        });
-        return;
-    }
-    
-    create_user(null, mobile);
-}
-
-function go_back_to_email() {
-    document.getElementById('mobile-section').style.display = 'none';
-    document.getElementById('email-section').style.display = 'block';
-}
-
-function create_user(email, mobile) {
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        btn.disabled = true;
-        btn.classList.add("disabled");
+    document.addEventListener('click', () => {
+        document.getElementById('lang-menu').classList.remove('active');
     });
-    
-    frappe.call({
-        method: "kisan_local.api.create_user",
-        args: { email, mobile },
-        error: function(r) {
-            console.error("User creation error:", r);
-            reset_buttons();
-            frappe.msgprint({
-                title: 'Error',
-                message: 'An error occurred while creating user. Please try again.',
-                indicator: 'red'
-            });
-        }
-    }).then(() => {
-        window.location.href = REDIRECT_URL;
-    });
-}
 
-function reset_buttons() {
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        btn.disabled = false;
-        btn.classList.remove("disabled");
+    document.querySelectorAll('.language-option').forEach(option => {
+        option.onclick = () => {
+            const lang = option.dataset.lang;
+            const url = new URL(window.location.href);
+            lang === 'en' ? url.searchParams.delete('lang') : url.searchParams.set('lang', lang);
+            window.location.href = url.toString();
+        };
     });
 }
 </script>
 
-<div class="container my-5 px-3" style="max-width: 540px;">
+<div class="container px-3 register-container">
+<div class="register-wrap">
+
+    <div class="page-lang">
+        <div class="language-dropdown" id="lang-dropdown">
+            🌐 <span id="selected-lang">English</span> ▼
+        </div>
+        <div class="language-menu" id="lang-menu">
+            <div class="language-option" data-lang="en">English</div>
+            <div class="language-option" data-lang="kn">ಕನ್ನಡ</div>
+            <div class="language-option" data-lang="ta">தமிழ்</div>
+            <div class="language-option" data-lang="te">తెలుగు</div>
+            <div class="language-option" data-lang="ml">മലയാളം</div>
+        </div>
+    </div>
+
+    <!-- Card -->
     <div class="card shadow-sm">
         <div class="card-body p-4 p-md-5">
 
-            <h3 class="text-center pb-2 mb-5" style="font-weight: 600; font-size: 1.3rem;">
+            <h3 class="text-center pb-2 mb-4" style="font-weight:600;">
                 {{ _("Register to Kisan Swaraj Sammelan Platform") }}
             </h3>
 
             <div id="email-section">
-                <div class="mb-4 d-flex justify-content-center">
-                    <div style="width: 300px;">
-                        <label class="form-label" style="font-weight: 500; margin-bottom: 8px; font-size: 0.9rem;">{{ _("Email") }}</label>
-                        <input 
-                            id="email"
-                            type="email"
-                            class="form-control"
-                            placeholder="{{ _('jane@example.com') }}"
-                            onkeypress="if(event.key === 'Enter') create_user_with_email()"
-                            style="background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 14px; font-size: 0.9rem;"
-                        />
-                    </div>
+
+                <div class="mb-4 center-narrow">
+                    <input id="email" type="email" class="form-control form-narrow"
+                           placeholder="{{ _('jane@example.com') }}">
                 </div>
 
-                <div class="mb-4 text-center">
-                    <button 
-                        onclick="create_user_with_email()"
-                        class="btn btn-primary btn-sm"
-                        style="width: 300px;"
-                    >
+                <div class="mb-4 center-narrow">
+                    <button class="btn btn-primary form-narrow"
+                            onclick="create_user_with_email()">
                         {{ _("Continue") }}
                     </button>
                 </div>
 
-                <div class="text-center text-muted mb-4" style="font-size: 0.85rem;">{{ _("or") }}</div>
+                <div class="text-center text-muted mb-3">{{ _("or") }}</div>
 
-                <div class="mb-3 text-center">
-                    <button 
-                        class="btn btn-primary btn-sm"
-                        onclick="create_user_without_email()"
-                        style="width: 300px;"
-                    >
+                <div class="center-narrow">
+                    <button class="btn btn-primary form-narrow"
+                            onclick="create_user_without_email()">
                         {{ _("I don't have an Email ID") }}
                     </button>
                 </div>
+
             </div>
 
-            <div id="mobile-section" style="display: none;">
-                <div class="mb-5 d-flex justify-content-center" style="margin-bottom: 2rem !important;">
-                    <div style="width: 300px;">
-                        <label class="form-label" style="font-weight: 500; margin-bottom: 8px; font-size: 0.9rem;">{{ _("Mobile Number") }}</label>
-                        <input 
-                            id="mobile"
-                            type="tel"
-                            class="form-control"
-                            placeholder="{{ _('Enter your 10-digit mobile number') }}"
-                            maxlength="10"
-                            onkeypress="if(event.key === 'Enter') create_user_with_mobile()"
-                            style="background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 14px; font-size: 0.9rem;"
-                        />
-                    </div>
+            <div id="mobile-section" style="display:none">
+
+                <div class="mb-4 center-narrow">
+                    <input id="mobile" type="tel" class="form-control form-narrow"
+                           placeholder="{{ _('Enter 10-digit mobile number') }}">
                 </div>
 
-                <div class="mb-3 text-center">
-                    <button 
-                        onclick="create_user_with_mobile()"
-                        class="btn btn-primary btn-sm"
-                        style="width: 300px;"
-                    >
+                <div class="center-narrow">
+                    <button class="btn btn-primary form-narrow"
+                            onclick="create_user_with_mobile()">
                         {{ _("Continue") }}
                     </button>
                 </div>
+
             </div>
 
         </div>
     </div>
+
+</div>
 </div>
 
 {% endblock %}
