@@ -38,12 +38,16 @@ def create_user(email=None, mobile=None, language=None):
         else:
             user = frappe.get_cached_doc("User", user_exists)
 
-            # Update language if different
             if user.language != user_language:
                 user.language = user_language
                 user.save(ignore_permissions=True)
                 frappe.db.commit()
 
+        if hasattr(frappe.local, 'login_manager'):
+            try:
+                frappe.local.login_manager.logout()
+            except Exception:
+                pass
         frappe.set_user(user.name)
         frappe.local.login_manager.login_as(user.name)
 
