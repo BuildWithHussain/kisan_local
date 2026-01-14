@@ -1,15 +1,14 @@
 import frappe
 
+
 @frappe.whitelist(allow_guest=True)
 def create_user(email=None, mobile=None, language=None):
     """
     Create or login user with email or mobile number
-    Language is set for multi-language support
     """
     try:
         user_language = language or "en"
-        
-        # Generate email based on input
+
         if mobile:
             email = f"user_{mobile}@noemail.com"
             first_name = f"Mobile-{mobile}"
@@ -19,12 +18,10 @@ def create_user(email=None, mobile=None, language=None):
             first_name = f"Guest-{random_hash}"
         else:
             first_name = email.split("@")[0]
-        
-        # Check if user exists
+
         user_exists = frappe.db.exists("User", email)
-        
+
         if not user_exists:
-            # Create new user
             user = frappe.get_doc({
                 "doctype": "User",
                 "email": email,
@@ -40,25 +37,23 @@ def create_user(email=None, mobile=None, language=None):
             user.insert()
             frappe.db.commit()
         else:
-            # Get existing user
             user = frappe.get_cached_doc("User", user_exists)
-            
+
             # Update language if different
             if user.language != user_language:
                 user.language = user_language
                 user.save(ignore_permissions=True)
                 frappe.db.commit()
-        
-        # Login user (same as original working code)
+
         frappe.set_user(user.name)
         frappe.local.login_manager.login_as(user.name)
-        
+
         return {
             "status": "success",
             "email": email,
             "message": "User logged in successfully"
         }
-    
+
     except Exception as e:
         frappe.log_error(message=str(e), title="User Creation Error")
         return {"status": "error", "message": str(e)}
@@ -70,24 +65,21 @@ def set_language(lang):
     Set language preference for current user and session
     """
     try:
-        # Set language in local context
         frappe.local.lang = lang
-        
-        # Update session language
+
         if hasattr(frappe.local, 'session_obj') and frappe.local.session_obj:
             frappe.local.session_obj.data.lang = lang
-        
-        # Update user preference if logged in
+
         if frappe.session.user and frappe.session.user != "Guest":
             user = frappe.get_doc("User", frappe.session.user)
             if user.language != lang:
                 user.language = lang
                 user.save(ignore_permissions=True)
-        
+
         frappe.db.commit()
-        
+
         return {"status": "ok", "lang": lang}
-    
+
     except Exception as e:
         frappe.log_error(str(e), "Set Language Error")
         return {"status": "error", "message": str(e)}
@@ -95,8 +87,7 @@ def set_language(lang):
 
 def get_context(context):
     """
-    This function is called when the page loads to set language from URL parameter
-    Add this to your register page's .py file if it exists, or it will work from the template
+    Call it when the page loads to set language from URL parameter
     """
     lang = frappe.form_dict.get('lang')
     if lang:

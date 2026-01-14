@@ -4,7 +4,6 @@ import frappe
 def get_context(context):
     """
     Set language from URL parameter before page renders
-    This ensures translations work on page load
     """
     lang = frappe.form_dict.get('lang', 'en')
 
