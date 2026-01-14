@@ -66,10 +66,23 @@
     min-width: 200px;
 }
 
-.language-menu.active { display: block; }
-.language-option { padding: 12px 16px; cursor: pointer; }
-.language-option:hover { background: #f5f5f5; }
-.language-option.selected { background: #e8f4fd; color: #2490ef; }
+.language-menu.active { 
+    display: block; 
+}
+
+.language-option { 
+    padding: 12px 16px; 
+    cursor: pointer; 
+}
+
+.language-option:hover { 
+    background: #f5f5f5; 
+}
+
+.language-option.selected { 
+    background: #e8f4fd; 
+    color: #2490ef; 
+}
 </style>
 
 <script>
@@ -83,10 +96,8 @@ const LANGUAGES = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (frappe.session.user && frappe.session.user !== 'Guest') {
-        window.location.href = REDIRECT_URL;
-    }
     initLanguageSelector();
+    setupEnterKeyListeners();
 });
 
 function initLanguageSelector() {
@@ -113,7 +124,6 @@ function initLanguageSelector() {
                 method: "kisan_local.api.set_language",
                 args: { lang }
             }).then(() => {
-                // Update URL with language parameter
                 const url = new URL(window.location.href);
                 if (lang === 'en') {
                     url.searchParams.delete('lang');
@@ -126,13 +136,29 @@ function initLanguageSelector() {
     });
 }
 
-window.addEventListener('pageshow', function(event) {
-    reset_buttons();
-    if (document.getElementById('mobile-section').style.display !== 'none') {
-        document.getElementById('mobile-section').style.display = 'none';
-        document.getElementById('email-section').style.display = 'block';
+function setupEnterKeyListeners() {
+    // Email input - Enter key submits
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        emailInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                create_user_with_email();
+            }
+        });
     }
-});
+
+    // Mobile input - Enter key submits
+    const mobileInput = document.getElementById('mobile');
+    if (mobileInput) {
+        mobileInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                create_user_with_mobile();
+            }
+        });
+    }
+}
 
 function create_user_with_email() {
     let email = document.getElementById("email").value.trim();
@@ -162,6 +188,11 @@ function create_user_with_email() {
 function create_user_without_email() {
     document.getElementById('email-section').style.display = 'none';
     document.getElementById('mobile-section').style.display = 'block';
+}
+
+function go_back_to_email() {
+    document.getElementById('mobile-section').style.display = 'none';
+    document.getElementById('email-section').style.display = 'block';
 }
 
 function create_user_with_mobile() {
@@ -201,7 +232,11 @@ function create_user(email, mobile) {
     
     frappe.call({
         method: "kisan_local.api.create_user",
-        args: { email, mobile, language: lang },
+        args: { 
+            email: email, 
+            mobile: mobile, 
+            language: lang 
+        },
         error: function(r) {
             console.error("User creation error:", r);
             reset_buttons();
@@ -212,6 +247,7 @@ function create_user(email, mobile) {
             });
         }
     }).then(() => {
+        // Direct redirect - same as original working code
         const redirectUrl = lang !== 'en' ? `${REDIRECT_URL}?lang=${lang}` : REDIRECT_URL;
         window.location.href = redirectUrl;
     });
@@ -224,6 +260,15 @@ function reset_buttons() {
         btn.classList.remove("disabled");
     });
 }
+
+window.addEventListener('pageshow', function(event) {
+    reset_buttons();
+    // Reset to email section on page show
+    if (document.getElementById('mobile-section').style.display !== 'none') {
+        document.getElementById('mobile-section').style.display = 'none';
+        document.getElementById('email-section').style.display = 'block';
+    }
+});
 </script>
 
 <div class="container px-3 register-container">
@@ -250,6 +295,7 @@ function reset_buttons() {
                 {{ _("Register to Kisan Swaraj Sammelan Platform") }}
             </h3>
 
+            <!-- Email Section -->
             <div id="email-section">
 
                 <div class="mb-4 center-narrow">
@@ -267,7 +313,7 @@ function reset_buttons() {
                 <div class="text-center text-muted mb-3">{{ _("or") }}</div>
 
                 <div class="center-narrow">
-                    <button class="btn btn-primary form-narrow"
+                    <button class="btn btn-secondary form-narrow"
                             onclick="create_user_without_email()">
                         {{ _("I don't have an Email ID") }}
                     </button>
@@ -275,17 +321,26 @@ function reset_buttons() {
 
             </div>
 
+            <!-- Mobile Section -->
             <div id="mobile-section" style="display:none">
 
                 <div class="mb-4 center-narrow">
                     <input id="mobile" type="tel" class="form-control form-narrow"
-                           placeholder="{{ _('Enter your 10-digit mobile number') }}">
+                           placeholder="{{ _('Enter your 10-digit mobile number') }}"
+                           maxlength="10">
                 </div>
 
-                <div class="center-narrow">
+                <div class="mb-3 center-narrow">
                     <button class="btn btn-primary form-narrow"
                             onclick="create_user_with_mobile()">
                         {{ _("Continue") }}
+                    </button>
+                </div>
+
+                <div class="center-narrow">
+                    <button class="btn btn-secondary form-narrow"
+                            onclick="go_back_to_email()">
+                        {{ _("Back") }}
                     </button>
                 </div>
 
