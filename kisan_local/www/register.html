@@ -104,12 +104,124 @@ function initLanguageSelector() {
     });
 
     document.querySelectorAll('.language-option').forEach(option => {
+        option.classList.toggle('selected', option.dataset.lang === currentLang);
+        
         option.onclick = () => {
             const lang = option.dataset.lang;
-            const url = new URL(window.location.href);
-            lang === 'en' ? url.searchParams.delete('lang') : url.searchParams.set('lang', lang);
-            window.location.href = url.toString();
+            
+            frappe.call({
+                method: "kisan_local.api.set_language",
+                args: { lang }
+            }).then(() => {
+                // Update URL with language parameter
+                const url = new URL(window.location.href);
+                if (lang === 'en') {
+                    url.searchParams.delete('lang');
+                } else {
+                    url.searchParams.set('lang', lang);
+                }
+                window.location.href = url.toString();
+            });
         };
+    });
+}
+
+window.addEventListener('pageshow', function(event) {
+    reset_buttons();
+    if (document.getElementById('mobile-section').style.display !== 'none') {
+        document.getElementById('mobile-section').style.display = 'none';
+        document.getElementById('email-section').style.display = 'block';
+    }
+});
+
+function create_user_with_email() {
+    let email = document.getElementById("email").value.trim();
+    
+    if (!email) {
+        frappe.msgprint({
+            title: __('Email Required'),
+            message: __('Please enter your email address'),
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        frappe.msgprint({
+            title: __('Invalid Email'),
+            message: __('Please enter a valid email address'),
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    create_user(email, null);
+}
+
+function create_user_without_email() {
+    document.getElementById('email-section').style.display = 'none';
+    document.getElementById('mobile-section').style.display = 'block';
+}
+
+function create_user_with_mobile() {
+    let mobile = document.getElementById("mobile").value.trim();
+    
+    if (!mobile) {
+        frappe.msgprint({
+            title: __('Mobile Number Required'),
+            message: __('Please enter your mobile number'),
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobile)) {
+        frappe.msgprint({
+            title: __('Invalid Mobile Number'),
+            message: __('Please enter a valid 10-digit Indian mobile number'),
+            indicator: 'red'
+        });
+        return;
+    }
+    
+    create_user(null, mobile);
+}
+
+function create_user(email, mobile) {
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add("disabled");
+    });
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const lang = urlParams.get('lang') || 'en';
+    
+    frappe.call({
+        method: "kisan_local.api.create_user",
+        args: { email, mobile, language: lang },
+        error: function(r) {
+            console.error("User creation error:", r);
+            reset_buttons();
+            frappe.msgprint({
+                title: __('Error'),
+                message: __('An error occurred while creating user. Please try again.'),
+                indicator: 'red'
+            });
+        }
+    }).then(() => {
+        const redirectUrl = lang !== 'en' ? `${REDIRECT_URL}?lang=${lang}` : REDIRECT_URL;
+        window.location.href = redirectUrl;
+    });
+}
+
+function reset_buttons() {
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove("disabled");
     });
 }
 </script>
@@ -167,7 +279,7 @@ function initLanguageSelector() {
 
                 <div class="mb-4 center-narrow">
                     <input id="mobile" type="tel" class="form-control form-narrow"
-                           placeholder="{{ _('Enter 10-digit mobile number') }}">
+                           placeholder="{{ _('Enter your 10-digit mobile number') }}">
                 </div>
 
                 <div class="center-narrow">
