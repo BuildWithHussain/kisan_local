@@ -6,103 +6,45 @@
     max-width: 540px;
     margin-top: 48px;
 }
-
-.register-wrap {
-    position: relative;
-    width: 100%;
-}
-
-.page-lang {
-    position: absolute;
-    top: 16px;
-    right: -140px; 
-    z-index: 20;
-}
-
-.form-narrow {
-    width: 300px;
-    max-width: 100%;
-}
-
-.center-narrow {
-    display: flex;
-    justify-content: center;
-}
+.register-wrap { position: relative; width: 100%; }
+.page-lang { position: absolute; top: 16px; right: -140px; z-index: 20; }
+.form-narrow { width: 300px; max-width: 100%; }
+.center-narrow { display: flex; justify-content: center; }
 
 @media (max-width: 768px) {
-    .page-lang {
-        position: static;
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 12px;
-    }
-    .form-narrow {
-        width: 100%;
-    }
+    .page-lang { position: static; display: flex; justify-content: flex-end; margin-bottom: 12px; }
+    .form-narrow { width: 100%; }
 }
 
 .language-dropdown {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 8px 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+    padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px;
 }
-
 .language-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 8px;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    display: none;
-    min-width: 200px;
+    position: absolute; top: 100%; right: 0; margin-top: 8px;
+    background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+    display: none; min-width: 200px;
 }
-
-.language-menu.active { 
-    display: block; 
-}
-
-.language-option { 
-    padding: 12px 16px; 
-    cursor: pointer; 
-}
-
-.language-option:hover { 
-    background: #f5f5f5; 
-}
-
-.language-option.selected { 
-    background: #e8f4fd; 
-    color: #2490ef; 
-}
+.language-menu.active { display: block; }
+.language-option { padding: 12px 16px; cursor: pointer; }
+.language-option:hover { background: #f5f5f5; }
+.language-option.selected { background: #e8f4fd; color: #2490ef; }
 </style>
 
 <script>
 const REDIRECT_URL = "/dashboard/book-tickets/KSS-2026-South-India";
-const LANGUAGES = {
-    'en': { native: 'English' },
-    'kn': { native: 'ಕನ್ನಡ' },
-    'ta': { native: 'தமிழ்' },
-    'te': { native: 'తెలుగు' },
-    'ml': { native: 'മലയാളം' }
-};
+const LANGUAGES = { en:{native:'English'}, kn:{native:'ಕನ್ನಡ'}, ta:{native:'தமிழ்'}, te:{native:'తెలుగు'}, ml:{native:'മലയാളം'} };
 
-document.addEventListener('DOMContentLoaded', function() {
+let loginInProgress = false;
+
+document.addEventListener('DOMContentLoaded', () => {
     initLanguageSelector();
     setupEnterKeyListeners();
 });
 
 function initLanguageSelector() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentLang = urlParams.get('lang') || 'en';
+    const url = new URL(window.location.href);
+    const currentLang = url.searchParams.get('lang') || 'en';
     document.getElementById('selected-lang').innerText = LANGUAGES[currentLang].native;
 
     document.getElementById('lang-dropdown').onclick = e => {
@@ -110,165 +52,75 @@ function initLanguageSelector() {
         document.getElementById('lang-menu').classList.toggle('active');
     };
 
-    document.addEventListener('click', () => {
-        document.getElementById('lang-menu').classList.remove('active');
-    });
+    document.addEventListener('click', () => document.getElementById('lang-menu').classList.remove('active'));
 
     document.querySelectorAll('.language-option').forEach(option => {
         option.classList.toggle('selected', option.dataset.lang === currentLang);
-        
         option.onclick = () => {
             const lang = option.dataset.lang;
-            
-            frappe.call({
-                method: "kisan_local.api.set_language",
-                args: { lang }
-            }).then(() => {
-                const url = new URL(window.location.href);
-                if (lang === 'en') {
-                    url.searchParams.delete('lang');
-                } else {
-                    url.searchParams.set('lang', lang);
-                }
-                window.location.href = url.toString();
-            });
+            const u = new URL(window.location.href);
+            lang === 'en' ? u.searchParams.delete('lang') : u.searchParams.set('lang', lang);
+            window.location.href = u.toString();
         };
     });
 }
 
 function setupEnterKeyListeners() {
-    // Email input - Enter key submits
-    const emailInput = document.getElementById('email');
-    if (emailInput) {
-        emailInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                create_user_with_email();
-            }
+    ['email','mobile'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.addEventListener('keypress',e=>{
+            if(e.key==='Enter'){e.preventDefault();id==='email'?create_user_with_email():create_user_with_mobile();}
         });
-    }
-
-    // Mobile input - Enter key submits
-    const mobileInput = document.getElementById('mobile');
-    if (mobileInput) {
-        mobileInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                create_user_with_mobile();
-            }
-        });
-    }
+    });
 }
 
 function create_user_with_email() {
-    let email = document.getElementById("email").value.trim();
-    
-    if (!email) {
-        frappe.msgprint({
-            title: __('Email Required'),
-            message: __('Please enter your email address'),
-            indicator: 'red'
-        });
+    const email = document.getElementById("email").value.trim();
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        frappe.msgprint({title:'Invalid Email',message:'Enter valid email',indicator:'red'});
         return;
     }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        frappe.msgprint({
-            title: __('Invalid Email'),
-            message: __('Please enter a valid email address'),
-            indicator: 'red'
-        });
-        return;
-    }
-    
-    create_user(email, null);
-}
-
-function create_user_without_email() {
-    document.getElementById('email-section').style.display = 'none';
-    document.getElementById('mobile-section').style.display = 'block';
-}
-
-function go_back_to_email() {
-    document.getElementById('mobile-section').style.display = 'none';
-    document.getElementById('email-section').style.display = 'block';
+    create_user(email,null);
 }
 
 function create_user_with_mobile() {
-    let mobile = document.getElementById("mobile").value.trim();
-    
-    if (!mobile) {
-        frappe.msgprint({
-            title: __('Mobile Number Required'),
-            message: __('Please enter your mobile number'),
-            indicator: 'red'
-        });
+    const mobile = document.getElementById("mobile").value.trim();
+    if(!/^[6-9]\d{9}$/.test(mobile)){
+        frappe.msgprint({title:'Invalid Mobile',message:'Enter valid mobile',indicator:'red'});
         return;
     }
-    
-    const mobileRegex = /^[6-9]\d{9}$/;
-    if (!mobileRegex.test(mobile)) {
-        frappe.msgprint({
-            title: __('Invalid Mobile Number'),
-            message: __('Please enter a valid 10-digit Indian mobile number'),
-            indicator: 'red'
-        });
-        return;
-    }
-    
-    create_user(null, mobile);
+    create_user(null,mobile);
 }
 
-function create_user(email, mobile) {
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        btn.disabled = true;
-        btn.classList.add("disabled");
-    });
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const lang = urlParams.get('lang') || 'en';
-    
+function create_user(email,mobile){
+    if(loginInProgress) return;
+    loginInProgress=true;
+
+    // Kill any old Frappe session
+    document.cookie="sid=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie="system_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie="full_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    localStorage.clear(); sessionStorage.clear();
+
+    const lang = new URLSearchParams(window.location.search).get('lang')||'en';
+
     frappe.call({
-        method: "kisan_local.api.create_user",
-        args: { 
-            email: email, 
-            mobile: mobile, 
-            language: lang 
-        },
-        error: function(r) {
-            console.error("User creation error:", r);
-            reset_buttons();
-            frappe.msgprint({
-                title: __('Error'),
-                message: __('An error occurred while creating user. Please try again.'),
-                indicator: 'red'
-            });
+        method:"kisan_local.api.create_user",
+        args:{email,mobile,language:lang}
+    }).then(r=>{
+        if(!r.message || r.message.status!=="success"){
+            loginInProgress=false;
+            frappe.msgprint({title:'Login Failed',message:'Try again',indicator:'red'});
+            return;
         }
-    }).then(() => {
-        // Direct redirect - same as original working code
-        const redirectUrl = lang !== 'en' ? `${REDIRECT_URL}?lang=${lang}` : REDIRECT_URL;
-        window.location.href = redirectUrl;
+
+        document.cookie="sid=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        const url = lang!=='en'?`${REDIRECT_URL}?lang=${lang}`:REDIRECT_URL;
+        window.location.replace(url);
+    }).catch(()=>{
+        loginInProgress=false;
     });
 }
-
-function reset_buttons() {
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        btn.disabled = false;
-        btn.classList.remove("disabled");
-    });
-}
-
-window.addEventListener('pageshow', function(event) {
-    reset_buttons();
-    // Reset to email section on page show
-    if (document.getElementById('mobile-section').style.display !== 'none') {
-        document.getElementById('mobile-section').style.display = 'none';
-        document.getElementById('email-section').style.display = 'block';
-    }
-});
 </script>
 
 <div class="container px-3 register-container">

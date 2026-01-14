@@ -1,4 +1,5 @@
 import frappe
+from frappe.auth import LoginManager
 
 
 @frappe.whitelist(allow_guest=True)
@@ -36,20 +37,21 @@ def create_user(email=None, mobile=None, language=None):
             user.insert()
             frappe.db.commit()
         else:
-            user = frappe.get_cached_doc("User", user_exists)
+            user = frappe.get_doc("User", user_exists)
 
             if user.language != user_language:
                 user.language = user_language
                 user.save(ignore_permissions=True)
                 frappe.db.commit()
 
-        if hasattr(frappe.local, 'login_manager'):
-            try:
-                frappe.local.login_manager.logout()
-            except Exception:
-                pass
-        frappe.set_user(user.name)
-        frappe.local.login_manager.login_as(user.name)
+        frappe.local.session_obj = None
+        frappe.clear_cache()
+
+        # Create fresh login manager
+        login_manager = LoginManager()
+        login_manager.login_as(user.name)
+
+        frappe.db.commit()
 
         return {
             "status": "success",
@@ -59,32 +61,6 @@ def create_user(email=None, mobile=None, language=None):
 
     except Exception as e:
         frappe.log_error(message=str(e), title="User Creation Error")
-        return {"status": "error", "message": str(e)}
-
-
-@frappe.whitelist(allow_guest=True)
-def set_language(lang):
-    """
-    Set language preference for current user and session
-    """
-    try:
-        frappe.local.lang = lang
-
-        if hasattr(frappe.local, 'session_obj') and frappe.local.session_obj:
-            frappe.local.session_obj.data.lang = lang
-
-        if frappe.session.user and frappe.session.user != "Guest":
-            user = frappe.get_doc("User", frappe.session.user)
-            if user.language != lang:
-                user.language = lang
-                user.save(ignore_permissions=True)
-
-        frappe.db.commit()
-
-        return {"status": "ok", "lang": lang}
-
-    except Exception as e:
-        frappe.log_error(str(e), "Set Language Error")
         return {"status": "error", "message": str(e)}
 
 
