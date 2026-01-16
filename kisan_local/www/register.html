@@ -2,7 +2,6 @@
 {% block page_content %}
 
 <style>
-/* Hide only the Home link, keep navbar for translation context */
 .navbar-home {
     display: none !important;
 }
@@ -223,10 +222,10 @@ function create_user(email, mobile) {
         btn.disabled = true;
         btn.classList.add("disabled");
     });
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const lang = urlParams.get('lang') || 'en';
-    
+
     frappe.call({
         method: "kisan_local.api.create_user",
         args: {
@@ -235,15 +234,34 @@ function create_user(email, mobile) {
             language: lang
         },
         callback: function(r) {
-            if (r.message && r.message.status === "success") {
-                // Redirect directly
-                const redirectUrl = lang !== 'en' ? `${REDIRECT_URL}?lang=${lang}` : REDIRECT_URL;
-                window.location.href = redirectUrl;
+            if (r.message && r.message.status === "success" && r.message.login_key) {
+                // Build the final redirect URL for after login
+                let finalRedirect = REDIRECT_URL;
+                const params = new URLSearchParams();
+
+                if (lang !== 'en') {
+                    params.append('lang', lang);
+                }
+
+                if (r.message.email) {
+                    params.append('email', r.message.email);
+                }
+
+                params.append('new_session', '1');
+
+                if (params.toString()) {
+                    finalRedirect += '?' + params.toString();
+                }
+
+                // Use kisan_local auto_login to auto-login and redirect to Buzz dashboard
+                // This bypasses the Buzz login page completely
+                const loginUrl = `/api/method/kisan_local.api.auto_login?key=${r.message.login_key}&redirect_to=${encodeURIComponent(finalRedirect)}`;
+                window.location.replace(loginUrl);
             } else {
                 reset_buttons();
                 frappe.msgprint({
                     title: __('Error'),
-                    message: __('An error occurred. Please try again.'),
+                    message: r.message?.message || __('An error occurred. Please try again.'),
                     indicator: 'red'
                 });
             }
